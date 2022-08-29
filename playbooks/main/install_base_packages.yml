@@ -1,0 +1,170 @@
+---
+- hosts: k8s_master:k8s_nodes
+  gather_facts: False
+  tasks:
+      - name: Including the variables.
+        include_vars:
+            file: ../../vars.yml
+
+      - name: Waiting for Debian to finish performing automatic updates before continuing.
+        script: ../../files/bash_scripts/monitor_automatic_updates_status.sh
+
+      - name: Performing a Package Upgrade.
+        become: yes
+        apt:
+            name: '*'
+            state: latest
+
+      - name: Installing the base packages.
+        become: yes
+        apt:
+            name: ['apt-transport-https', 'ca-certificates', 'curl', 'haveged', 'gnupg2', 'openssl', 'python-pip', 'python3-pip', 'qemu-guest-agent', 'software-properties-common', 'arptables', 'ebtables']
+
+      - name: Configuring the nodes to use legacy iptables for compatibility with Kubernetes.
+        become: yes
+        alternatives:
+            name: "{{ item }}"
+            path: /usr/sbin/{{ item }}-legacy
+        with_items:
+            - "iptables"
+            - "ip6tables"
+            - "arptables"
+            - "ebtables"
+
+      - name: Adding the necessary GPG keys.
+        become: yes
+        apt_key:
+            url: "{{ item }}"
+        with_items:
+            - "https://download.docker.com/linux/debian/gpg"
+            - "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+
+      - name: Adding the necessary package repositories.
+        become: yes
+        apt_repository:
+            repo: "{{ item }}"
+        with_items:
+            - "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"
+            - "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+
+      - name: Updating the package repositories.
+        become: yes
+        apt:
+            update_cache: yes
+
+      - name: Installing the required packages to bootstrap a kubernetes cluster.
+        become: yes
+        apt:
+            name: ['containerd', 'kubelet', 'kubeadm', 'kubectl']
+            #docker-ce={{ docker_version }}
+
+      # - name: Setting Docker CGroup to systemd.
+      #   become: yes
+      #   shell: |
+      #       cat > /etc/docker/daemon.json <<EOF
+      #       {
+      #         "exec-opts": ["native.cgroupdriver=systemd"],
+      #         "log-driver": "json-file",
+      #         "log-opts": {
+      #           "max-size": "100m"
+      #         },
+      #         "storage-driver": "overlay2"
+      #       }
+      #       EOF
+
+      - name: Setting containerd prereq.
+        become: yes
+        shell: |
+            cat > /etc/modules-load.d/containerd.conf <<EOF
+            overlay
+            br_netfilter
+            EOF
+
+      - name: Creates containerd directory
+        file:
+          path: /etc/containerd
+          state: directory
+
+      - name: Setting containerd CGroup to systemd.
+        become: yes
+        shell: |
+            cat > /etc/containerd/config.toml <<EOF
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes]
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+              runtime_type = "io.containerd.runc.v2"
+              runtime_engine = ""
+              runtime_root = ""
+              privileged_without_host_devices = false
+              base_runtime_spec = ""
+              [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+              SystemdCgroup = true
+             EOF
+
+      - name: Installing the necessary Python library dependencies to use the `k8s` Ansible module.
+        become: yes
+        pip:
+            name: ['openshift', 'kubernetes', 'pyyaml', 'requests']
+            extra_args: --upgrade
+
+      - name: Enabling the necessary Systemd modules.
+        become: yes
+        systemd:
+            state: started
+            name: "{{ item }}"
+            enabled: yes
+        with_items:
+            #- "docker"
+            - "containerd"
+            - "kubelet"
+            - "qemu-guest-agent"
+            - "haveged"
+
+      - name: Removing the DHCP lines for eth0 from the interfaces file.
+        become: yes
+        lineinfile:
+            state: absent
+            path: /etc/network/interfaces
+            line: iface eth0 inet dhcp
+
+      - name: Configuring iptables to route packets across the network bridge.
+        become: yes
+        sysctl:
+            name: "{{ entry }}"
+            value: 1
+            sysctl_set: yes
+        loop:
+            #- net.bridge.bridge-nf-call-ip6tables
+            #- net.bridge.bridge-nf-call-iptables
+            - net.ipv4.ip_forward
+        loop_control:
+            loop_var: entry
+
+      - name: Ensuring that the overlay kernel module is loaded.
+        modprobe:
+            name: overlay
+            state: present
+
+      # - name: Ensuring that the br_netfilter kernel module is loaded.
+      #   modprobe:
+      #       name: br_netfilter
+      #       state: present
+
+      - name: Disabling Swap.
+        become: yes
+        mount:
+            name: "{{ filesystem }}"
+            fstype: swap
+            state: absent
+        loop:
+            - swap
+            - none
+        loop_control:
+            loop_var: filesystem
+
+      - name: Turning off swap.
+        become: yes
+        shell: swapoff -a
+
+      - name: Rebooting the OS to switch to cloud-init provided network configuration & finalize any necessary package upgrades.
+        become: yes
+        reboot:

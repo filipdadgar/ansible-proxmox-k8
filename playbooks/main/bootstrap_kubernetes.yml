@@ -1,0 +1,76 @@
+---
+- hosts: k8s_master
+  gather_facts: False
+  tasks:
+      - name: Including the variables.
+        include_vars:
+            file: ../../vars.yml
+
+      - name: Initializing Kubernetes on the master.
+        become: yes
+        shell: |
+            kubeadm init \
+                --kubernetes-version="{{ kubernetes_version }}" \
+                --pod-network-cidr={{ calico_cidr }}/16
+
+      - name: Creating a kube directory on the master for the config files.
+        become: yes
+        file:
+            path: $HOME/.kube
+            state: directory
+
+      - name: Copying the kube config to the kube directory.
+        become: yes
+        shell: cp /etc/kubernetes/admin.conf $HOME/.kube/config
+
+      - name: Downloading the Calico Pod Network manifest.
+        get_url:
+            url: "{{ calico_policy_url }}"
+            dest: /tmp/calico.yml
+
+      - name: Modifying the Pod network CIDR for Calico.
+        replace:
+            path: /tmp/calico.yml
+            regexp: 193.168.0.0
+            replace: "{{ calico_cidr }}"
+
+      - name: Applying the Calico Pod Network to Kubernetes.
+        become: yes
+        shell: kubectl apply -f /tmp/calico.yml
+
+      - name: Deleting the Calico Pod Network manifest from disk.
+        file:
+            path: /tmp/calico.yml
+            state: absent
+
+      - name: Retreiving the kube config.
+        become: yes
+        shell: cat ~/.kube/config
+        register: k8s_config
+
+      - name: Creating a local ~/.kube directory on your workstation.
+        local_action:
+            module: file
+            path: ~/.kube
+            state: directory
+
+      - name: Copying ~/.kube/config to your workstation.
+        local_action: copy content={{ k8s_config.stdout }} dest=~/.kube/config
+
+      - name: Retreiving the kubeadm join command.
+        become: yes
+        shell: kubeadm token create --print-join-command
+        when: k8s_join_command is undefined
+        register: k8s_join_command
+
+
+- hosts: k8s_nodes
+  gather_facts: False
+  tasks:
+      - name: Including the variables.
+        include_vars:
+            file: ../../vars.yml
+
+      - name: Joining the nodes to the master.
+        become: yes
+        shell: "{{ hostvars[groups['k8s_master'][0]]['k8s_join_command']['stdout'] }} --ignore-preflight-errors=all"
