@@ -1,18 +1,17 @@
-# RETIREMENT NOTICE
+# Kudos to https://github.com/zimmertr/Bootstrap-Kubernetes-with-QEMU
 
-This project has been retired in favor of [TKS](https://github.com/zimmertr/TKS). It will no longer be updated.
+This project has been inspired by https://github.com/zimmertr/Bootstrap-Kubernetes-with-QEMU
 
 <hr>
 
 
-# TKS (TJ's Kubernetes Service)
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/zimmertr/Bootstrap-Kubernetes-with-QEMU/master/screenshot.png" width="800">
-</p>
-
 ## Summary
-Declaratively build a 4 node Kubernetes cluster on Proxmox using Ansible and QEMU. Optionally enable advanced features including ingress, load balancing, unattended upgrades, the Dashboard, etc.
+Declaratively build a 2(with option for more) node Kubernetes cluster on Proxmox using Ansible and QEMU. Optionally enable advanced features including ingress, load balancing, unattended upgrades, the Dashboard, etc.
+
+1. K8 master and workers
+2. Metallb with flannel
+3. Ingress Class
+4. Storage Class
 
 **Approximate deployment time:** 25 minutes
 
@@ -47,30 +46,7 @@ Declaratively build a 4 node Kubernetes cluster on Proxmox using Ansible and QEM
 | [Unattended Upgrades](https://wiki.debian.org/UnattendedUpgrades) | `ansible-playbook -i inventory.ini playbooks/optional/enable_unattended_upgrades.yml` | |
 
 
-## Tips
-1. You can rollback the entire deployment with: `ansible-playbook -i inventory.ini playbooks/optional/delete_all_resources.yml`
-2. If Calico isn't deploying correctly it's likely the CIDR you assigned to it in `vars.yml` conflicts with your network.
-3. [There appears to be an issue](https://forum.proxmox.com/threads/has-cloud-init-been-changed-between-5-3-and-6-0.56175/) with Proxmox's `cloud-init` implementation. Perhaps just with Debian? As a result, your VM might not have the correct information in `/etc/resolv.conf` and may also have multiple IP Addresses assigned to the `eth0` network interfaces. Furthermore, if you do not have a DHCP server active in the network that you are provisoning the VMs to, it is entirely possible that nothing will be present at all in `/etc/resolv.conf`.
-4. See [this repository](https://github.com/zimmertr/Bootstrap-Kubernetes-with-LXC) to do this with LXC instead.  Benefits of using LXC include:
-```
-* No virtualization overhead means better performance
-* Ability to directly mount volumes from your server into your containers.
-```
-
 
 ## TODO
-1. Add better support for multi-node Proxmox clusters.
-2. Perform security audit and enhance if necessary.
-3. Add info to README about updating inventory file and how to handle SSH key generation and propegation.
-4. Create playbook to upgrade kubernetes version for kubeadm cluster.
-
-
-## Problems
-1. The `proxmox_kvm` module is out of date and does not support cloudinit related api calls. Meaning shell commands must be used instead to perform `qm create` tasks.
-2. The `k8s` module does not support applying Kubernetes Deployments from URL. Instead of using `get_url` to download them first, and then apply them with `k8s`, I just use `shell` to run a `kubectl apply -f`. [Feature Request here](https://github.com/ansible/ansible/issues/48402).
-3. Miscellaneous `qcow2` image issues:
-
-| OS | Issue |
-| -- | ----- |
-| CentOS | A nameserver is baked into `/etc/resolv.conf` by default. [Bug Report here](https://bugs.centos.org/view.php?id=15426) |
-| CoreOS | Proxmix issued cloud-init does not seem to configure networking properly. |
+1. Add better support for plugins
+2. Add better support for pxe boot of proxmox.
