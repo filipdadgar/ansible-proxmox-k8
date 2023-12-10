@@ -25,11 +25,12 @@ Declaratively build a 2(with option for more) node Kubernetes cluster on Proxmox
 4. ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa to generate SSH keys for your nodes. And copy it to proxmox id_rsa.pub
 5. Post installation for demo purposes:
 - Run the following:
-´´´
+
+'''
 mkdir -p $HOME/.kube
-  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-  sudo chown $(id -u):$(id -g) $HOME/.kube/config
-´´´
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+'''
 
 
 ## Instructions
