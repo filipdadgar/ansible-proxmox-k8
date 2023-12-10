@@ -31,7 +31,7 @@ docker_version: '5:19.03.11~3-0~debian-buster'
 
 # The version of Kubernetes to install.
 # The newest release can be found here: https://kubernetes.io/docs/setup/release/notes/
-kubernetes_version: "v1.28.2"
+kubernetes_version: "v1.25.2"
 
 # VM IDs
 k8s_master_id: '4010'
@@ -46,7 +46,7 @@ k8s_node1_hn: 'proxk8worker1'
 
 
 # Number of CPUs
-k8s_master_cpu: '1'
+k8s_master_cpu: '2'
 k8s_node1_cpu: '1'
 
 

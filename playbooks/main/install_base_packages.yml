@@ -55,7 +55,7 @@
       - name: Installing the required packages to bootstrap a kubernetes cluster.
         become: yes
         apt:
-            name: ['containerd', 'kubelet', 'kubeadm', 'kubectl']
+            name: ['containerd', 'kubelet=1.25.0-00', 'kubeadm=1.25.0-00', 'kubectl=1.25.0-00']
             #docker-ce={{ docker_version }}
 
       # - name: Setting Docker CGroup to systemd.

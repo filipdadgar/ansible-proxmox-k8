@@ -21,7 +21,15 @@ Declaratively build a 2(with option for more) node Kubernetes cluster on Proxmox
 2. DNS Server*
 3. Ansible 2.7.0+. Known incompatibility with a previous build.
 - For MAC: brew install ansible-lint ansible python-markupsafe
-- *A DNS server is not technically required, it is possible to manually add entries corresponding to your node hostnames to your Proxmox's hosts file. </sub>
+- *A DNS server is not technically required, it is possible to manually add entries corresponding to your node hostnames to your Proxmox's hosts file.
+4. ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa to generate SSH keys for your nodes. And copy it to proxmox id_rsa.pub
+5. Post installation for demo purposes:
+- Run the following:
+´´´
+mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+´´´
 
 
 ## Instructions

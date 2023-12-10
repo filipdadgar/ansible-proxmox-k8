@@ -2,7 +2,7 @@
 - hosts: k8s_master
   collections:
     - kubernetes.core  
-  gather_facts: False
+  gather_facts: true
   tasks:
       - name: Including the variables.
         include_vars:

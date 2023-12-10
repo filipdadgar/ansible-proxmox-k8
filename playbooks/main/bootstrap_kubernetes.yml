@@ -65,7 +65,7 @@
 
 
 - hosts: k8s_nodes
-  gather_facts: False
+  gather_facts: true
   tasks:
       - name: Including the variables.
         include_vars:
