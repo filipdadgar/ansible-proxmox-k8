@@ -17,6 +17,7 @@ k8s_resource_pool: 'Kubernetes'
 k8s_ssh_key: '/root/.ssh/id_rsa.pub'
 
 # CIDR for the Calico Pod Network - MUST be different from your Kubernetes CIDR to avoid an IP conflict. Subnet size will automatically be set to /16.
+# We use flannel to keep it as simple as possible.
 calico_cidr: '10.244.0.0'
 
 # URL for the Calico Network Policy:
@@ -35,74 +36,74 @@ kubernetes_version: "v1.25.0"
 # VM IDs
 k8s_master_id: '4010'
 k8s_node1_id: '40100'
-#k8s_node2_id: '40101'
-#k8s_node3_id: '40102'
+k8s_node2_id: '40101'
+
 
 # Hostnames
 k8s_master_hn: 'proxk8master'
 k8s_node1_hn: 'proxk8worker1'
-#k8s_node2_hn: 'proxk8worker2'
-#k8s_node3_hn: 'proxk8worker3'
+k8s_node2_hn: 'proxk8worker2'
+
 
 # Number of CPUs
-k8s_master_cpu: '2'
-k8s_node1_cpu: '2'
-#k8s_node2_cpu: '2'
-#k8s_node3_cpu: '1'
+k8s_master_cpu: '1'
+k8s_node1_cpu: '1'
+k8s_node2_cpu: '1'
+
 
 # Amount of memory expressed in megabytes
 k8s_master_mem: '2048'
 k8s_node1_mem: '2048'
-#k8s_node2_mem: '2048'
-#k8s_node3_mem: '2048'
+k8s_node2_mem: '2048'
+
 
 # Disk Sizes
 k8s_master_size: '30G'
 k8s_node1_size: '30G'
-#k8s_node2_size: '30G'
-#k8s_node3_size: '30G'
+k8s_node2_size: '30G'
+
 
 # IP Addresses
-k8s_master_ip: '192.168.1.100'
-k8s_node1_ip: '192.168.1.101'
-#k8s_node2_ip: '192.168.1.102'
-#k8s_node3_ip: '192.168.1.103'
+k8s_master_ip: '10.10.10.9'
+k8s_node1_ip: '10.10.10.10'
+k8s_node2_ip: '10.10.10.11'
+
 
 # Subnet Sizes
-k8s_master_sn: '/22'
-k8s_node1_sn: '/22'
-#k8s_node2_sn: '/22'
-#k8s_node3_sn: '/22'
+k8s_master_sn: '/24'
+k8s_node1_sn: '/24'
+k8s_node2_sn: '/24'
+
 
 # Network Gateway
-k8s_master_gw: '192.168.1.1'
-k8s_node1_gw: '192.168.1.1'
-#k8s_node2_gw: '192.168.1.1'
-#k8s_node3_gw: '192.168.1.1'
+k8s_master_gw: '10.10.10.1'
+k8s_node1_gw: '10.10.10.1'
+k8s_node2_gw: '10.10.10.1'
+
 
 # DNS Servers
 k8s_master_ns: '192.168.2.2'
 k8s_node1_ns: '192.168.2.2'
-#k8s_node2_ns: '192.168.2.2'
-#k8s_node3_ns: '192.168.2.2'
+k8s_node2_ns: '192.168.2.2'
+
 
 # Search Domains
 k8s_master_sd: 'dadgar.se'
 k8s_node1_sd: 'dadgar.se'
-#k8s_node2_sd: 'dadgar.se'
-#k8s_node3_sd: 'dadgar.se'
+k8s_node2_sd: 'dadgar.se'
+
 
 # Network Bridges
 k8s_master_bridge: 'vmbr0'
 k8s_node1_bridge: 'vmbr0'
-#k8s_node2_bridge: 'vmbr0'
-#k8s_node3_bridge: 'vmbr0'
+k8s_node2_bridge: 'vmbr0'
+
 
 # Storage volumes
 k8s_master_stg: 'local-lvm'
 k8s_node1_stg: 'local-lvm'
-#k8s_node2_stg: 'local-lvm'
-#k8s_node3_stg: 'local-lvm'
+k8s_node2_stg: 'local-lvm'
+
 
 
 ###############################################################################################
@@ -135,7 +136,7 @@ k8s_user_name: 'tj'
 dashboard_load_balancer_address_pool: 'layer2'
 
 # The IP address within the Address Pool to which you want to bind the service.
-dashboard_load_balancer_ip: '192.168.1.110'
+dashboard_load_balancer_ip: '10.10.10.100'
 
 # The hostname with which you want to test connectivity to the IP Address after the deployment has completed.
 dashboard_hostname: 'adguard.dadgar.se'
@@ -150,177 +151,7 @@ dashboard_hostname: 'adguard.dadgar.se'
 ###############################################################################################
 
 # VLAN Tags
-# k8s_master_vlan: '40'
-# k8s_node1_vlan: '40'
-# k8s_node2_vlan: '40'
-# k8s_node3_vlan: '40'
+k8s_master_vlan: '10'
+k8s_node1_vlan: '10'
+k8s_node2_vlan: '10'
 
-
-###############################################################################################
-#                                    -Unattended Upgrades-                                    #
-#                                WARNING: EXPERIMENTAL FEATURE                                #
-###############################################################################################
-# These parameters are only required if you want to enable Unattended Upgrades on the         #
-# operating systems that comprise your Kubernetes master and worker nodes. None of these      #
-# variables are required to enable the feature. However, you may wish to enable email         #
-# notifications via SMTP or tweak the way in which Unattended Upgrades are applied to your    #
-# system. To do so, simply uncomment the relevant configuration setting.                      #
-#                                                                                             #
-# NOTE: If you enable any of the following variables, then you must enable the other ones as  #
-# well or SMTP will not work:                                                                 #
-#     - smtp_server                                                                           #
-#     - smtp_port                                                                             #
-#     - smtp_username                                                                         #
-#     - smtp_password                                                                         #
-#     - email_address                                                                         #
-###############################################################################################
-
-# SMTP Server
-smtp_server: 'smtp.gmail.com'
-
-# SMTP Port
-smtp_port: '587'
-
-# SMTP Server username
-smtp_username: 'thomaszimmerman93@gmail.com'
-
-# SMTP Server password
-smtp_password: 'PASSWORD'
-
-# The email address to which notifications will be delivered.
-email_address: 'thomaszimmerman93@gmail.com'
-
-# You want to be naughty and use SMTP without TLS.
-#smtp_use_tls: 'off'
-
-# Only receive emails when an error occurs.
-# mail_only_on_error: "true"
-
-# Only perform upgrades when a graceful OS shutdown occurs.
-update_only_on_shutdown: "true"
-
-# Automatically remove unused kernel packages.
-# remove_unused_kernel_packages: "true"
-
-# Automatically remove unused dependencies.
-# remove_unused_dependencies: "true"
-
-# Automatically perform a reboot after upgrading if required.
-#automatic_reboot_if_required: "true"
-
-# If automatic reboots are enabled, configure the time at which they occur.
-#automatic_reboot_time: "02:00"
-
-# Enable logging to syslog.
-enable_syslog_logging: "true"
-
-
-###############################################################################################
-#                                        -NFS Options-                                        #
-###############################################################################################
-# These parameters are only required if you have an NFS server and would like to enable the   #
-# optional support for dynamic provisioning of Persistent Storage volumes for your pods.      #
-###############################################################################################
-
-# NFS server
-nfs_hostname: '192.168.1.5'
-
-# NFS Mount Point
-nfs_mount_point: '/Volume2/k8'
-
-# NFS Provisioner Name
-nfs_provisioner: 'datapool'
-
-# Namespace to deploy the NFS Provisioner to.
-nfs_namespace: 'nfs-provisioner'
-
-# Default reclaim policy. https://kubernetes.io/docs/concepts/storage/storage-classes/#reclaim-policy
-nfs_reclaim_policy: 'Retain'
-
-
-###############################################################################################
-#                                      -MetalLB Options-                                      #
-###############################################################################################
-#                                                                                             #
-# WARNING: MetalLB is currently supported, however dynamic provisioning is NOT currently      #
-# supported despite the explanation below. This will come in a later release, however, if you #
-# are interested in using this feature you will need to modify the configmap located in the   #
-# MetalLB files directory yourself to match the variables you declare here.                   #
-#                                                                                             #
-# These parameters are only required if you want to enable on-prem load balancing with        #
-# MetalLB. The MetalLB configuration file will be dynamically provisioned based on how many   #
-# variable sets you declare below. This is intended to allow you to provision a single or     #
-# multiple address pools depending on your personal network configuration. The configuration  #
-# is dynamically generated based on how many sets of variables you list below. For example:   #
-#                                                                                             #
-# If you wish to deploy a single address pool, you would declare these three variables.       #
-#                                                                                             #
-# metallb_ap1_name: NAME                                                                      #
-# metallb_ap1_protocol: PROTOCOL                                                              #
-# metallb_ap1_cidr: CIDR                                                                      #
-#                                                                                             #
-#                                                                                             #
-# However, if you wished to declare two address pools, you would include a second set of      #
-# variables where the `ap1` portion of the variable name is incremeneted by one.              #
-#                                                                                             #
-# metallb_ap1_name: NAME                                                                      #
-# metallb_ap2_name: NAME                                                                      #
-# metallb_ap1_protocol: PROTOCOL                                                              #
-# metallb_ap2_protocol: PROTOCOL                                                              #
-# metallb_ap1_cidr: CIDR                                                                      #
-# metallb_ap2_cidr: CIDR                                                                      #
-###############################################################################################
-
-# The IP Address of the router you wish to peer with.
-# metallb_peer_router: '192.168.1.1'
-
-# # The AS Number of the router you wish to peer with.
-# metallb_peer_asn: '64512'
-
-# # The names of your address pools.
-# metallb_ap1_name: 'VLAN10'
-# metallb_ap4_name: 'VLAN70'
-# metallb_ap2_name: 'VLAN50'
-# metallb_ap3_name: 'VLAN60'
-
-# # The protocols of your address pools. (bgp|layer2)
-# metallb_ap1_protocol: 'bgp'
-# metallb_ap2_protocol: 'bgp'
-# metallb_ap3_protocol: 'bgp'
-# metallb_ap4_protocol: 'bgp'
-
-# # The CIDRs of your address pools.
-# metallb_ap1_cidr: '192.168.10.1/24'
-# metallb_ap2_cidr: '192.168.50.1/24'
-# metallb_ap3_cidr: '192.168.60.1/24'
-# metallb_ap4_cidr: '192.168.70.1/24'
-
-metallb_ap1_name: prox-pool                                                                      #
-metallb_ap1_protocol: layer2             
-metallb_ap1_cidr: 192.168.4.0/22                                                 #
-#metallb_ap1_cidr: 192.168.4.1-192.168.4.10
-
-
-###############################################################################################
-#                              -NGINX Ingress Controller Options-                             #
-###############################################################################################
-# These parameters are only required if you want to enable the NGINX ingress controller.      #
-# REQUIREMENT: The NGINX Ingress controller integration requires a Load Balancer integration. #
-###############################################################################################
-
-# The IP Address to use
-nginx_load_balancer_ip: '192.168.1.105'
-
-
-###############################################################################################
-#                                      -DataDog Options-                                      #
-###############################################################################################
-# These parameters are only required if you have an account with DataDog and would like to    #
-# enable metrics collection for your cluster.                                                 #
-###############################################################################################
-
-# Your DataDog API Key
-dd_api_key: 'APIKEY'
-
-# Namespace to deploy DataDog to
-dd_namespace: 'default'

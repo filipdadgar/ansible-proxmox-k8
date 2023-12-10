@@ -5,13 +5,11 @@
     id_list:
         - "{{ k8s_master_id }}"
         - "{{ k8s_node1_id }}"
-        #- "{{ k8s_node2_id }}"
-        #- "{{ k8s_node3_id }}"
+        - "{{ k8s_node2_id }}"
     id_stg_list:
         - { id: "{{ k8s_master_id }}", stg: "{{ k8s_master_stg }}" }
         - { id: "{{ k8s_node1_id }}", stg: "{{ k8s_node1_stg }}" }
-        #- { id: "{{ k8s_node2_id }}", stg: "{{ k8s_node2_stg }}" }
-        #- { id: "{{ k8s_node3_id }}", stg: "{{ k8s_node3_stg }}" }
+        - { id: "{{ k8s_node2_id }}", stg: "{{ k8s_node2_stg }}" }
   tasks:
       - name: Including the variables.
         include_vars:
@@ -44,8 +42,8 @@
         with_items:
             - { id: "{{ k8s_master_id }}", hn: "{{ k8s_master_hn }}", cpu: "{{ k8s_master_cpu }}", mem: "{{ k8s_master_mem }}", bridge: "{{ k8s_master_bridge }}", gw: "{{ k8s_master_gw }}", ip: "{{ k8s_master_ip }}", sn: "{{ k8s_master_sn }}", ns: "{{ k8s_master_ns }}", sd: "{{ k8s_master_sd }}" }
             - { id: "{{ k8s_node1_id }}", hn: "{{ k8s_node1_hn }}", cpu: "{{ k8s_node1_cpu }}", mem: "{{ k8s_node1_mem }}", bridge: "{{ k8s_node1_bridge }}", gw: "{{ k8s_node1_gw }}", ip: "{{ k8s_node1_ip }}", sn: "{{ k8s_node1_sn }}", ns: "{{ k8s_node1_ns }}", sd: "{{ k8s_node1_sd }}" }
-            #- { id: "{{ k8s_node2_id }}", hn: "{{ k8s_node2_hn }}", cpu: "{{ k8s_node2_cpu }}", mem: "{{ k8s_node2_mem }}", bridge: "{{ k8s_node2_bridge }}", gw: "{{ k8s_node2_gw }}", ip: "{{ k8s_node2_ip }}", sn: "{{ k8s_node2_sn }}", ns: "{{ k8s_node2_ns }}", sd: "{{ k8s_node2_sd }}" }
-            #- { id: "{{ k8s_node3_id }}", hn: "{{ k8s_node3_hn }}", cpu: "{{ k8s_node3_cpu }}", mem: "{{ k8s_node3_mem }}", bridge: "{{ k8s_node3_bridge }}", gw: "{{ k8s_node3_gw }}", ip: "{{ k8s_node3_ip }}", sn: "{{ k8s_node3_sn }}", ns: "{{ k8s_node3_ns }}", sd: "{{ k8s_node3_sd }}" }
+            - { id: "{{ k8s_node2_id }}", hn: "{{ k8s_node2_hn }}", cpu: "{{ k8s_node2_cpu }}", mem: "{{ k8s_node2_mem }}", bridge: "{{ k8s_node2_bridge }}", gw: "{{ k8s_node2_gw }}", ip: "{{ k8s_node2_ip }}", sn: "{{ k8s_node2_sn }}", ns: "{{ k8s_node2_ns }}", sd: "{{ k8s_node2_sd }}" }
+          
 
       - name: Setting the VLAN Tags for the VMs.
         shell: >
@@ -54,17 +52,16 @@
         with_items:
             - { id: "{{ k8s_master_id }}", bridge: "{{ k8s_master_bridge }}", vlan: "{{ k8s_master_vlan }}" }
             - { id: "{{ k8s_node1_id }}", bridge: "{{ k8s_node1_bridge }}", vlan: "{{ k8s_node1_vlan }}" }
-            #- { id: "{{ k8s_node2_id }}", bridge: "{{ k8s_node2_bridge }}", vlan: "{{ k8s_node2_vlan }}" }
-            #- { id: "{{ k8s_node3_id }}", bridge: "{{ k8s_node3_bridge }}", vlan: "{{ k8s_node3_vlan }}" }
+            - { id: "{{ k8s_node2_id }}", bridge: "{{ k8s_node2_bridge }}", vlan: "{{ k8s_node2_vlan }}" }
+
         when:
             - k8s_master_vlan is defined
             - k8s_master_vlan|length != 0
             - k8s_node1_vlan is defined
             - k8s_node1_vlan|length != 0
-            #- k8s_node2_vlan is defined
-            #- k8s_node2_vlan|length != 0
-            #- k8s_node3_vlan is defined
-            #- k8s_node3_vlan|length != 0
+            - k8s_node2_vlan is defined
+            - k8s_node2_vlan|length != 0
+
 
       - name: Importing the qcow2 image as a disk.
         shell: qm importdisk {{ item.id }} {{ qcow2_download_location }}image.qcow2 {{ item.stg }}
@@ -84,8 +81,7 @@
         with_items:
             - { id: "{{ k8s_master_id }}", size: "{{ k8s_master_size }}" }
             - { id: "{{ k8s_node1_id }}", size: "{{ k8s_node1_size }}" }
-            #- { id: "{{ k8s_node2_id }}", size: "{{ k8s_node2_size }}" }
-            #- { id: "{{ k8s_node3_id }}", size: "{{ k8s_node3_size }}" }
+            - { id: "{{ k8s_node2_id }}", size: "{{ k8s_node2_size }}" }
 
       - name: Starting the VMs.
         shell: qm start {{ item }}
@@ -99,8 +95,7 @@
         with_items:
             - "{{ k8s_master_hn }}"
             - "{{ k8s_node1_hn }}"
-            #- "{{ k8s_node2_hn }}"
-            #- "{{ k8s_node3_hn }}"
+            - "{{ k8s_node2_hn }}"
 
       - name: Waiting 2 minutes for for Debian to finish booting.
         pause:
