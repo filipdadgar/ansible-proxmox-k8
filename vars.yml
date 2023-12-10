@@ -63,8 +63,8 @@ k8s_node1_size: '30G'
 
 
 # IP Addresses
-k8s_master_ip: '10.10.10.10'
-k8s_node1_ip: '10.10.10.11'
+k8s_master_ip: '192.168.1.100'
+k8s_node1_ip: '192.168.1.101'
 
 
 # Subnet Sizes
@@ -73,8 +73,8 @@ k8s_node1_sn: '/24'
 
 
 # Network Gateway
-k8s_master_gw: '10.10.10.1'
-k8s_node1_gw: '10.10.10.1'
+k8s_master_gw: '192.168.1.1'
+k8s_node1_gw: '1192.168.1.1'
 
 
 # DNS Servers
@@ -143,6 +143,6 @@ dashboard_hostname: 'adguard.dadgar.se'
 ###############################################################################################
 
 # VLAN Tags
-k8s_master_vlan: '10'
-k8s_node1_vlan: '10'
+#k8s_master_vlan: '10'
+#k8s_node1_vlan: '10'
 
