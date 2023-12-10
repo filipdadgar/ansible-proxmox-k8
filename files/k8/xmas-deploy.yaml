@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: xmas-webserver-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: xmas-webserver
+  template:
+    metadata:
+      labels:
+        app: xmas-webserver
+    spec:
+      containers:
+        - name: xmas-webserver
+          image: filipdadgar/xmas-webserver:latest # Change this to your actual Docker image
+          ports:
+            - containerPort: 3000
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: xmas-webserver-service
+spec:
+  selector:
+    app: xmas-webserver
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP
