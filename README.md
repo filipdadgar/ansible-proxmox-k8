@@ -24,7 +24,7 @@ Declaratively build a 2(with option for more) node Kubernetes cluster on Proxmox
 - *A DNS server is not technically required, it is possible to manually add entries corresponding to your node hostnames to your Proxmox's hosts file.
 4. ssh-keygen -t rsa -b 2048 -f ~/.ssh/id_rsa to generate SSH keys for your nodes. And copy it to proxmox id_rsa.pub
 5. Post installation for demo purposes:
-- Run the following:
+- Run the following from the master node:
 
 ```
 
