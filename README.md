@@ -21,7 +21,7 @@ Declaratively build a 2(with option for more) node Kubernetes cluster on Proxmox
 2. DNS Server*
 3. Ansible 2.7.0+. Known incompatibility with a previous build.
 - For MAC: brew install ansible-lint ansible python-markupsafe
-<sub>*A DNS server is not technically required, it is possible to manually add entries corresponding to your node hostnames to your Proxmox's hosts file. </sub>
+- *A DNS server is not technically required, it is possible to manually add entries corresponding to your node hostnames to your Proxmox's hosts file. </sub>
 
 
 ## Instructions
