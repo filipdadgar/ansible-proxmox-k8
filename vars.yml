@@ -74,7 +74,7 @@ k8s_node1_sn: '/24'
 
 # Network Gateway
 k8s_master_gw: '192.168.1.1'
-k8s_node1_gw: '1192.168.1.1'
+k8s_node1_gw: '192.168.1.1'
 
 
 # DNS Servers
