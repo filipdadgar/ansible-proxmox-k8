@@ -1,5 +1,3 @@
-# Kudos to https://github.com/zimmertr/Bootstrap-Kubernetes-with-QEMU
-
 This project has been inspired by https://github.com/zimmertr/Bootstrap-Kubernetes-with-QEMU
 
 <hr>
@@ -59,5 +57,5 @@ sudo chown $(id -u):$(id -g) $HOME/.kube/config
 
 
 ## TODO
-1. Add better support for plugins
+1. Add better support for plugins and later version of k8
 2. Add better support for pxe boot of proxmox.
