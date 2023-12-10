@@ -11,7 +11,7 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-  - 10.10.10.20-10.10.10.250
+  - 192.168.1.110-192.168.1.115
   autoAssign: true
 ---
 apiVersion: metallb.io/v1beta1
@@ -25,3 +25,6 @@ spec:
 
 # Apply the configuration
 kubectl apply -f metallb-config.yaml
+
+kubectl create secret docker-registry regcred --docker-server=<your-registry-server> --docker-username=<your-name> --docker-password=<your-pword> --docker-email=<your-email>
+

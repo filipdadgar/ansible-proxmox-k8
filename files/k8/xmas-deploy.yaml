@@ -12,16 +12,20 @@ spec:
       labels:
         app: xmas-webserver
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: xmas-webserver
-          image: filipdadgar/xmas-webserver:latest # Change this to your actual Docker image
+          image: filipdadgar/xmas-server
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
           resources:
             limits:
               memory: "128Mi"
-              cpu: "500m"
+              cpu: "100m"
       restartPolicy: Always
+
 ---
 apiVersion: v1
 kind: Service

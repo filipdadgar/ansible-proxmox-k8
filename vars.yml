@@ -52,8 +52,8 @@ k8s_node1_cpu: '1'
 
 
 # Amount of memory expressed in megabytes
-k8s_master_mem: '2048'
-k8s_node1_mem: '2048'
+k8s_master_mem: '4096'
+k8s_node1_mem: '4096'
 
 
 
@@ -93,8 +93,8 @@ k8s_node1_bridge: 'vmbr0'
 
 
 # Storage volumes
-k8s_master_stg: 'local-lvm'
-k8s_node1_stg: 'local-lvm'
+k8s_master_stg: 'VMDISK'
+k8s_node1_stg: 'VMDISK'
 
 
 
