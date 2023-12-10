@@ -30,7 +30,7 @@ Declaratively build a 2(with option for more) node Kubernetes cluster on Proxmox
 1. Modify the `vars.yml` file with values specific to your environment.
 2. Provision DNS A records for the IP Addresses & Hostnames you defined for your nodes in the `vars.yml` file.
 3. Modify the `inventory.ini` file to reflect your chosen DNS records and the location of the SSH keys used to connect to the nodes.
-4. Run the deployment: `ansible-playbook -i inventory.ini site.yml`
+4. Run the deployment: `ansible-playbook -i inventory.ini site.yml --ask-pass`
 5. After deployment, a `~/.kube` directory will be created on your workstation. You can use the `config` file within to interact with your cluster.
 
 **Optional:**

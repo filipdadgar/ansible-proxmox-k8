@@ -1,12 +1,11 @@
 ---
 - hosts: proxmox_server
-  gather_facts: False
+  gather_facts: true
   vars:
     id_list:
         - "{{ k8s_master_id }}"
         - "{{ k8s_node1_id }}"
-        #- "{{ k8s_node2_id }}"
-        #- "{{ k8s_node3_id }}" 
+
   tasks: 
       - name: Including the variables.
         include_vars:

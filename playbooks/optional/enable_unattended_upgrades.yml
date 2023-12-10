@@ -47,8 +47,7 @@
         with_items:
             - { hn: "{{ k8s_master_hn }}", sd: "{{ k8s_master_sd }}" }
             - { hn: "{{ k8s_node1_hn }}", sd: "{{ k8s_node1_sd }}" }
-            - { hn: "{{ k8s_node2_hn }}", sd: "{{ k8s_node2_sd }}" }
-            - { hn: "{{ k8s_node3_hn }}", sd: "{{ k8s_node3_sd }}" }             
+      
         when: 
             - smtp_server is defined
             - smtp_server|length != 0

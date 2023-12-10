@@ -36,73 +36,69 @@ kubernetes_version: "v1.28.2"
 # VM IDs
 k8s_master_id: '4010'
 k8s_node1_id: '40100'
-k8s_node2_id: '40101'
+
 
 
 # Hostnames
 k8s_master_hn: 'proxk8master'
 k8s_node1_hn: 'proxk8worker1'
-k8s_node2_hn: 'proxk8worker2'
+
 
 
 # Number of CPUs
 k8s_master_cpu: '1'
 k8s_node1_cpu: '1'
-k8s_node2_cpu: '1'
+
 
 
 # Amount of memory expressed in megabytes
 k8s_master_mem: '2048'
 k8s_node1_mem: '2048'
-k8s_node2_mem: '2048'
+
 
 
 # Disk Sizes
 k8s_master_size: '30G'
 k8s_node1_size: '30G'
-k8s_node2_size: '30G'
+
 
 
 # IP Addresses
 k8s_master_ip: '10.10.10.9'
 k8s_node1_ip: '10.10.10.10'
-k8s_node2_ip: '10.10.10.11'
+
 
 
 # Subnet Sizes
 k8s_master_sn: '/24'
 k8s_node1_sn: '/24'
-k8s_node2_sn: '/24'
+
 
 
 # Network Gateway
 k8s_master_gw: '10.10.10.1'
 k8s_node1_gw: '10.10.10.1'
-k8s_node2_gw: '10.10.10.1'
+
 
 
 # DNS Servers
-k8s_master_ns: '192.168.2.2'
-k8s_node1_ns: '192.168.2.2'
-k8s_node2_ns: '192.168.2.2'
+k8s_master_ns: '192.168.1.1'
+k8s_node1_ns: '192.168.1.1'
 
 
 # Search Domains
 k8s_master_sd: 'dadgar.se'
 k8s_node1_sd: 'dadgar.se'
-k8s_node2_sd: 'dadgar.se'
 
 
 # Network Bridges
 k8s_master_bridge: 'vmbr0'
 k8s_node1_bridge: 'vmbr0'
-k8s_node2_bridge: 'vmbr0'
 
 
 # Storage volumes
 k8s_master_stg: 'local-lvm'
 k8s_node1_stg: 'local-lvm'
-k8s_node2_stg: 'local-lvm'
 
 
 
@@ -130,7 +126,7 @@ k8s_node2_stg: 'local-lvm'
 k8s_dashboard_url: 'https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.3/aio/deploy/recommended.yaml'
 
 # Service user created for the dashboard.
-k8s_user_name: 'tj'
+k8s_user_name: 'fd'
 
 # The MetalLB Address Pool from which you want to obtain an IP address.
 dashboard_load_balancer_address_pool: 'layer2'
@@ -153,5 +149,4 @@ dashboard_hostname: 'adguard.dadgar.se'
 # VLAN Tags
 k8s_master_vlan: '10'
 k8s_node1_vlan: '10'
-k8s_node2_vlan: '10'
 
