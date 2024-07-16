@@ -91,4 +91,4 @@
 
       - name: Waiting 2 minutes for for Debian to finish booting.
         pause:
-            seconds: 60
+            seconds: 120

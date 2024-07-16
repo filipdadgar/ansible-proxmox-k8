@@ -1,0 +1,5 @@
+{
+    "yaml.schemas": {
+        "kubernetes://schema/v1%40service": "file:///Users/filipdadgar/dev/ansible-proxmox-k8/files/k8/xmas-deploy.yaml"
+    }
+}

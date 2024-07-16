@@ -161,6 +161,32 @@
         loop_control:
             loop_var: filesystem
 
+      - name: Configure SSH server
+        become: yes
+        lineinfile:
+          path: /etc/ssh/sshd_config
+          regexp: "{{ item.regexp }}"
+          line: "{{ item.line }}"
+          backup: yes
+        loop:
+          - { regexp: '^#?Port', line: 'Port 22' }
+          - { regexp: '^#?AddressFamily', line: 'AddressFamily any' }
+          - { regexp: '^#?ListenAddress', line: 'ListenAddress 0.0.0.0' }
+          # Add more lines as needed
+        notify:
+          - Restart SSH
+
+      - name: Restart SSH if changed
+        meta: flush_handlers
+
+        handlers:
+          - name: Restart SSH
+            become: yes
+            service:
+              name: ssh
+              state: restarted
+
+
       - name: Turning off swap.
         become: yes
         shell: swapoff -a

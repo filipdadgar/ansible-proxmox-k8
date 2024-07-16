@@ -24,6 +24,10 @@ calico_cidr: '10.244.0.0'
 # Can be found here: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#tabs-pod-install-2
 calico_policy_url: 'https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml' #'https://docs.projectcalico.org/v3.19/manifests/calico.yaml'
 
+#kubernetes_version: "1.24.0"  # Update to your required Kubernetes version
+cilium_cidr: "10.0.0.0"        # Use Cilium's CIDR, modify if needed
+cilium_policy_url: "https://raw.githubusercontent.com/cilium/cilium/v1.12/install/kubernetes/quick-install.yaml"
+
 # The version of Docker to use on the hosts.
 # Make sure the version is listed here: https://kubernetes.io/docs/setup/release/notes/
 # You can list available versions with: `aptitude versions docker-ce`
@@ -63,8 +67,8 @@ k8s_node1_size: '30G'
 
 
 # IP Addresses
-k8s_master_ip: '192.168.1.100'
-k8s_node1_ip: '192.168.1.101'
+k8s_master_ip: '10.10.10.10'
+k8s_node1_ip: '10.10.10.11'
 
 
 # Subnet Sizes
@@ -73,8 +77,8 @@ k8s_node1_sn: '/24'
 
 
 # Network Gateway
-k8s_master_gw: '192.168.1.1'
-k8s_node1_gw: '192.168.1.1'
+k8s_master_gw: '10.10.10.1'
+k8s_node1_gw: '10.10.10.1'
 
 
 # DNS Servers
@@ -143,6 +147,6 @@ dashboard_hostname: 'adguard.dadgar.se'
 ###############################################################################################
 
 # VLAN Tags
-#k8s_master_vlan: '10'
-#k8s_node1_vlan: '10'
+k8s_master_vlan: '10'
+k8s_node1_vlan: '10'
 
