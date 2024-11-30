@@ -6,6 +6,13 @@
       include_vars:
         file: ../../vars.yml
 
+    - name: Reset the cluster
+      become: yes
+      shell: kubeadm reset -f
+      ignore_errors: yes
+      register: reset_cluster
+      changed_when: "'[reset] Successfully stopped the kube-apiserver' in reset_cluster.stdout"
+
     - name: Initializing Kubernetes on the master.
       become: yes
       shell: |
@@ -29,33 +36,63 @@
         name:
           - curl
           - tar
-          - sha256sum
+          - coreutils
         state: present
 
-    - name: Download Cilium CLI
-      become: yes
-      shell: |
-        CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt)
-        CLI_ARCH=amd64
-        if [ "$(uname -m)" = "aarch64" ]; then CLI_ARCH=arm64; fi
-        curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
-        sha256sum --check cilium-linux-${CLI_ARCH}.tar.gz.sha256sum
-        tar xzvf cilium-linux-${CLI_ARCH}.tar.gz -C /usr/local/bin
-        rm cilium-linux-${CLI_ARCH}.tar.gz{,.sha256sum}
-      args:
-        executable: /bin/bash
+    - name: Download Helm command line tool
+      ansible.builtin.uri:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        return_content: true
+      register: helm_installer
 
-    - name: Install Cilium using the CLI
+    - name: Install Helm
+      ansible.builtin.command:
+        cmd: bash
+        stdin: "{{ helm_installer.content }}"
+        creates: /usr/local/bin/helm
+      environment:
+        DESIRED_VERSION: "{{ helm_version | default('') }}"        
+  
+    # - name: Download Cilium from GitHub
+    #   ansible.builtin.uri:
+    #     url: "https://github.com/cilium/cilium/archive/refs/heads/main.tar.gz"
+    #     method: GET
+    #     dest: "/tmp/main.tar.gz"
+    #     return_content: no
+    #   register: download_result
+    
+    # - name: Extract cilium
+    #   ansible.builtin.unarchive:
+    #     src: /tmp/main.tar.gz
+    #     dest: /tmp
+    #     remote_src: yes
+    #   when: download_result is succeeded
+
+    - name: Install Cilium with Helm
       become: yes
       shell: |
-        cilium install --chart-directory ./install/kubernetes/cilium
+        helm repo add cilium https://helm.cilium.io/
+        helm repo update
+        helm install cilium cilium/cilium --namespace kube-system
       args:
-        chdir: /tmp
+        executable: /bin/bash        
 
     - name: Retreiving the kube config.
       become: yes
       shell: cat ~/.kube/config
       register: k8s_config
+
+    - name: Create a remote ~/.kube directory on master node
+      become: yes
+      file:
+        path: ~/.kube
+        state: directory
+
+    - name: Copy the kube config to the remote ~/.kube directory.
+      become: yes
+      copy:
+        content: "{{ k8s_config.stdout }}"
+        dest: ~/.kube/config
 
     - name: Creating a local ~/.kube directory on your workstation.
       local_action:
@@ -64,7 +101,7 @@
         state: directory
 
     - name: Copying ~/.kube/config to your workstation.
-      local_action: copy content={{ k8s_config.stdout }} dest=~/.kube/config
+      local_action: copy content={{ k8s_config.stdout }} dest=~/.kube/config-proxmox
 
     - name: Retreiving the kubeadm join command.
       become: yes

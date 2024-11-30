@@ -18,7 +18,7 @@
       - name: Installing the base packages.
         become: yes
         apt:
-            name: ['apt-transport-https', 'ca-certificates', 'curl', 'haveged', 'gnupg2', 'openssl', 'python-pip', 'python3-pip', 'qemu-guest-agent', 'software-properties-common', 'arptables', 'ebtables']
+            name: ['apt-transport-https', 'ca-certificates', 'curl', 'haveged', 'gnupg2', 'openssl', 'python-pip', 'python3-pip', 'qemu-guest-agent', 'software-properties-common', 'arptables', 'ebtables', 'coreutils']
 
       - name: Configuring the nodes to use legacy iptables for compatibility with Kubernetes.
         become: yes
@@ -31,31 +31,42 @@
             - "arptables"
             - "ebtables"
 
-      - name: Adding the necessary GPG keys.
+      - name: Ensure /etc/apt/keyrings directory exists
         become: yes
-        apt_key:
-            url: "{{ item }}"
-        with_items:
-            - "https://download.docker.com/linux/debian/gpg"
-            - "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+        file:
+          path: /etc/apt/keyrings
+          state: directory
+          mode: '0755'
 
-      - name: Adding the necessary package repositories.
+      - name: Download Kubernetes apt key
+        become: yes
+        get_url:
+          url: https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key
+          dest: /tmp/kubernetes-release.key
+
+      - name: Add Kubernetes apt key
+        become: yes
+        ansible.builtin.apt_key:
+          file: /tmp/kubernetes-release.key
+          keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+      - name: Add Kubernetes repository
         become: yes
         apt_repository:
-            repo: "{{ item }}"
-        with_items:
-            - "deb [arch=amd64] https://download.docker.com/linux/debian buster stable"
-            - "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+          repo: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /'
+          filename: kubernetes
+          state: present
 
-      - name: Updating the package repositories.
+      - name: Update the package repositories
         become: yes
         apt:
-            update_cache: yes
+          update_cache: yes
 
-      - name: Installing the required packages to bootstrap a kubernetes cluster.
+      - name: Install the required packages to bootstrap a Kubernetes cluster
         become: yes
         apt:
-            name: ['containerd', 'kubelet=1.25.0-00', 'kubeadm=1.25.0-00', 'kubectl=1.25.0-00']
+          name: ['containerd', 'kubelet', 'kubeadm', 'kubectl']
+          state: present
             #docker-ce={{ docker_version }}
 
       # - name: Setting Docker CGroup to systemd.
@@ -179,12 +190,18 @@
       - name: Restart SSH if changed
         meta: flush_handlers
 
-        handlers:
-          - name: Restart SSH
-            become: yes
-            service:
-              name: ssh
-              state: restarted
+
+
+
+
+
+
+      # handlers:
+      #   - name: Restart SSH
+      #     become: yes
+      #     service:
+      #       name: ssh
+      #       state: restarted
 
 
       - name: Turning off swap.
