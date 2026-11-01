@@ -16,11 +16,19 @@ k8s_resource_pool: 'Kubernetes'
 # Path to the SSH Public Key on your Proxmox Server.
 k8s_ssh_key: '/root/.ssh/id_rsa.pub'
 
-# CNI: Cilium is what's actually installed (via Helm in bootstrap_kubernetes.yml). The repo
-# used to also carry unused Calico/Flannel variables left over from an earlier iteration -
-# removed, since the live cluster has only ever run Cilium and they were dead weight.
-cilium_cidr: "10.0.0.0"
-cilium_policy_url: "https://raw.githubusercontent.com/cilium/cilium/v1.12/install/kubernetes/quick-install.yaml"
+# CNI: Flannel is what's actually running on the live cluster (verified: kube-flannel
+# namespace, kube-flannel-ds-* DaemonSet on every node since near cluster creation,
+# /etc/cni/net.d/10-flannel.conflist on the nodes). These used to be misleadingly named
+# calico_cidr/calico_policy_url (a leftover from the upstream template this repo was forked
+# from, which originally supported Calico) despite calico_policy_url's *value* already
+# pointing at Flannel's own manifest - renamed for clarity, value unchanged.
+#
+# A later, separate branch (feature/cilium) tried migrating to Cilium via Helm, but that
+# migration was never actually applied to the live cluster - don't resurrect it without
+# first confirming with whoever runs this cluster that a CNI migration is actually wanted,
+# since swapping CNI under a live cluster is highly disruptive.
+flannel_cidr: "10.244.0.0"
+flannel_policy_url: "https://raw.githubusercontent.com/flannel-io/flannel/master/Documentation/kube-flannel.yml"
 
 # Kubernetes version. Live cluster is on v1.31.x as of 2026-11-01.
 # - kubernetes_version (no 'v' prefix) pins the kubelet/kubeadm/kubectl apt packages in

@@ -30,7 +30,7 @@
       shell: |
         kubeadm init \
           --kubernetes-version="{{ kubeadm_init_version }}" \
-          --pod-network-cidr={{ cilium_cidr }}/16
+          --pod-network-cidr={{ flannel_cidr }}/16
 
     - name: Creating a kube directory on the master for the config files.
       become: yes
@@ -42,37 +42,13 @@
       become: yes
       shell: cp /etc/kubernetes/admin.conf $HOME/.kube/config
 
-    - name: Install required packages for Cilium CLI.
+    - name: Installing the Flannel CNI.
       become: yes
-      apt:
-        name:
-          - curl
-          - tar
-          - coreutils
-        state: present
-
-    - name: Download Helm command line tool
-      ansible.builtin.uri:
-        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-        return_content: true
-      register: helm_installer
-
-    - name: Install Helm
-      ansible.builtin.command:
-        cmd: bash
-        stdin: "{{ helm_installer.content }}"
-        creates: /usr/local/bin/helm
-      environment:
-        DESIRED_VERSION: "{{ helm_version | default('') }}"
-
-    - name: Install Cilium with Helm
-      become: yes
-      shell: |
-        helm repo add cilium https://helm.cilium.io/
-        helm repo update
-        helm install cilium cilium/cilium --namespace kube-system
-      args:
-        executable: /bin/bash
+      shell: kubectl --kubeconfig=$HOME/.kube/config apply -f {{ flannel_policy_url }}
+      # This is what the live cluster actually runs (verified: kube-flannel namespace,
+      # kube-flannel-ds-* DaemonSet on every node). A prior version of this playbook
+      # installed Cilium via Helm instead - that was never applied to the live cluster,
+      # so Helm/Cilium CLI aren't needed here at all; Flannel is a plain manifest apply.
 
     - name: Retreiving the kube config.
       become: yes

@@ -5,7 +5,7 @@ This project has been inspired by https://github.com/zimmertr/Bootstrap-Kubernet
 ## This is half of a two-repo setup
 
 This repo provisions the infrastructure layer: Proxmox VMs -> base OS -> a bare `kubeadm` +
-Cilium cluster. Once that's up, **[k8gitops](https://github.com/filipdadgar/k8gitops)** (a
+Flannel cluster. Once that's up, **[k8gitops](https://github.com/filipdadgar/k8gitops)** (a
 separate, private repo) takes over everything above that layer via Flux GitOps - all apps,
 MetalLB, DNS, storage classes, etc. Don't use this repo's optional playbooks for things
 k8gitops already manages (see the table below) - they install older, disconnected copies of
@@ -18,7 +18,7 @@ this repo provisions is a 4-node cluster (1 control-plane + 3 workers) spread ac
 list can hold any number of worker entries; it isn't hardcoded to a fixed count.
 
 1. K8s control-plane and worker nodes (`kubeadm`)
-2. Cilium CNI
+2. Flannel CNI
 3. Per-node hardware passthrough support (vGPU, raw PCI GPU, USB) where a node's `vars.yml`
    entry needs it
 
