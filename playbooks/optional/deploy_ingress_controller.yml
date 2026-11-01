@@ -1,4 +1,8 @@
 ---
+# SUPERSEDED - not used by the live cluster. No app in k8gitops uses an Ingress resource
+# anywhere; every app is exposed via a MetalLB LoadBalancer Service + external-dns directly
+# (see e.g. apps/home-assistant/README.md in k8gitops, which calls out "no ingress
+# controller" as a deliberate architecture choice). Kept here only for reference/history.
 - hosts: k8s_master
   gather_facts: true
   tasks:

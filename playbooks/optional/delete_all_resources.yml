@@ -1,39 +1,61 @@
 ---
+# Destroys all 4 real k8s node VMs across BOTH Proxmox hosts. Previously this only knew
+# about 2 VM IDs (a master + a single worker) via vars.yml's old flat structure, and would
+# have silently done nothing for the other 2 real nodes while still deleting the shared
+# resource pool out from under them. Also previously deleted the user's entire local
+# ~/.kube directory, which could hold config for other, unrelated clusters too - now scoped
+# to just this cluster's own file.
+
 - hosts: proxmox_server
   gather_facts: true
   vars:
-    id_list:
-        - "{{ k8s_master_id }}"
-        - "{{ k8s_node1_id }}"
+    k8s_all_nodes: "{{ [k8s_master_node] + k8s_workers }}"
 
-  tasks: 
+  tasks:
       - name: Including the variables.
         include_vars:
             file: ../../vars.yml
-            
+
+      - name: Safety check - refuse to destroy without explicit confirmation.
+        assert:
+          that:
+            - confirm_destroy | default(false) | bool
+          fail_msg: >-
+            This playbook destroys all 4 k8s node VMs and the shared resource pool. Re-run
+            with -e confirm_destroy=true only once you've confirmed that's actually what
+            you want.
+        run_once: true
+
       - name: Stopping the VMs.
-        shell: qm stop {{ item }}
-        with_items: "{{ id_list }}"
+        shell: qm stop {{ item.id }}
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
         ignore_errors: yes
 
       - name: Destroying the VMs.
-        shell: qm destroy {{ item }}
-        with_items: "{{ id_list }}"
+        shell: qm destroy {{ item.id }}
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
         ignore_errors: yes
 
       - name: Deleting the Resource Pool.
         shell: pvesh delete /pools/{{ k8s_resource_pool }}
+        run_once: true
+        delegate_to: "{{ k8s_master_node.host }}"
         ignore_errors: yes
 
       - name: Deleting the Debian qcow2 image.
         file:
-            path: "/tmp/image.qcow2"
+            path: "{{ qcow2_download_location }}image.qcow2"
             state: absent
         ignore_errors: yes
+        # Runs on every proxmox_server host, since deploy_qcow2_vms.yml downloads a local
+        # copy to each hypervisor individually.
 
-      - name: Deleting the ~/.kube directory.
+      - name: Deleting this cluster's own local kubeconfig file (not the whole ~/.kube dir).
         local_action:
             module: file
-            path: ~/.kube
+            path: ~/.kube/config-proxmox
             state: absent
+        run_once: true
         ignore_errors: yes

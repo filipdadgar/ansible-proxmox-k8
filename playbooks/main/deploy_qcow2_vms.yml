@@ -2,12 +2,7 @@
 - hosts: proxmox_server
   gather_facts: true
   vars:
-    id_list:
-        - "{{ k8s_master_id }}"
-        - "{{ k8s_node1_id }}"
-    id_stg_list:
-        - { id: "{{ k8s_master_id }}", stg: "{{ k8s_master_stg }}" }
-        - { id: "{{ k8s_node1_id }}", stg: "{{ k8s_node1_stg }}" }
+    k8s_all_nodes: "{{ [k8s_master_node] + k8s_workers }}"
   tasks:
       - name: Including the variables.
         include_vars:
@@ -16,52 +11,58 @@
       - name: Creating a resource pool.
         shell: pvesh create /pools -poolid "{{ k8s_resource_pool }}" --Comment "Kubernetes Cluster"
         ignore_errors: yes
+        run_once: true
+        delegate_to: "{{ k8s_master_node.host }}"
 
       - name: Downloading the Debian qcow2 image.
         get_url:
             url: "{{ qcow2_image }}"
             dest: "{{ qcow2_download_location }}image.qcow2"
         ignore_errors: yes
+        # Runs on every proxmox_server host (not just once) - this is a 2-node Proxmox
+        # cluster, and `qm importdisk` needs a local copy of the image on whichever
+        # hypervisor is actually creating each VM.
 
       - name: Creating the VMs.
         shell: >
             qm create {{ item.id }}
             --pool {{ k8s_resource_pool }}
             --ostype "l26"
+            --bios ovmf
+            --machine q35
             --name {{ item.hn }}
-            --description "Kubernetes VM"
+            --description "Kubernetes VM - {{ item.hn }}"
             --agent 1
-            --cores {{ item.cpu }}
-            --memory {{ item.mem }}
-            --net0 "virtio,bridge={{ item.bridge }}"
-            --ipconfig0 "gw={{ item.gw }},ip={{ item.ip }}{{ item.sn }}"
-            --nameserver {{ item.ns }}
-            --searchdomain {{ item.sd }}
+            --cores {{ item.cpu | default(k8s_vm_defaults.cpu) }}
+            --memory {{ item.mem | default(k8s_vm_defaults.mem) }}
+            --net0 "virtio,bridge={{ item.bridge | default(k8s_vm_defaults.bridge) }}{{ ',firewall=1' if item.firewall | default(false) else '' }}"
+            --ipconfig0 "gw={{ item.gw | default(k8s_vm_defaults.gw) }},ip={{ item.ip }}{{ item.sn | default(k8s_vm_defaults.sn) }}"
+            --nameserver "{{ item.ns | default(k8s_vm_defaults.ns) }}"
+            --searchdomain {{ item.sd | default(k8s_vm_defaults.sd) }}
             --sshkeys {{ k8s_ssh_key }}
-        with_items:
-            - { id: "{{ k8s_master_id }}", hn: "{{ k8s_master_hn }}", cpu: "{{ k8s_master_cpu }}", mem: "{{ k8s_master_mem }}", bridge: "{{ k8s_master_bridge }}", gw: "{{ k8s_master_gw }}", ip: "{{ k8s_master_ip }}", sn: "{{ k8s_master_sn }}", ns: "{{ k8s_master_ns }}", sd: "{{ k8s_master_sd }}" }
-            - { id: "{{ k8s_node1_id }}", hn: "{{ k8s_node1_hn }}", cpu: "{{ k8s_node1_cpu }}", mem: "{{ k8s_node1_mem }}", bridge: "{{ k8s_node1_bridge }}", gw: "{{ k8s_node1_gw }}", ip: "{{ k8s_node1_ip }}", sn: "{{ k8s_node1_sn }}", ns: "{{ k8s_node1_ns }}", sd: "{{ k8s_node1_sd }}" }
-        ignore_errors: yes   
-
-      - name: Setting the VLAN Tags for the VMs.
-        shell: >
-            qm set {{ item.id }}
-            --net0 "virtio,bridge={{ item.bridge }},tag={{ item.vlan }}"
-        with_items:
-            - { id: "{{ k8s_master_id }}", bridge: "{{ k8s_master_bridge }}", vlan: "{{ k8s_master_vlan }}" }
-            - { id: "{{ k8s_node1_id }}", bridge: "{{ k8s_node1_bridge }}", vlan: "{{ k8s_node1_vlan }}" }
-
-        when:
-            - k8s_master_vlan is defined
-            - k8s_master_vlan|length != 0
-            - k8s_node1_vlan is defined
-            - k8s_node1_vlan|length != 0
+            {{ item.extra_qm_args | default('') }}
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
         ignore_errors: yes
 
+      - name: Setting the VLAN Tag for a node (only if one is actually defined for it).
+        shell: >
+            qm set {{ item.id }}
+            --net0 "virtio,bridge={{ item.bridge | default(k8s_vm_defaults.bridge) }},tag={{ item.vlan }}"
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
+        when: item.vlan is defined and item.vlan | length > 0
+        ignore_errors: yes
+        # None of the 4 real nodes currently use a VLAN tag (all plain vmbr0) - this stays
+        # as an opt-in per-node setting (add `vlan: 'N'` to a node's dict in vars.yml) rather
+        # than a required field, so it doesn't force VLAN config that doesn't apply today.
 
       - name: Importing the qcow2 image as a disk.
-        shell: qm importdisk {{ item.id }} {{ qcow2_download_location }}image.qcow2 {{ item.stg }}
-        with_items: "{{ id_stg_list }}"
+        shell: >
+            qm importdisk {{ item.id }} {{ qcow2_download_location }}image.qcow2 {{ item.stg }}
+            {{ '--format ' + item.stg_format if item.stg_format is defined else '' }}
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
         ignore_errors: yes
 
       - name: Configuring the VM Hardware.
@@ -71,30 +72,47 @@
                --ide2 {{ item.stg }}:cloudinit
                --serial0 /dev/tty0
                --boot c --bootdisk scsi0
-        with_items: "{{ id_stg_list }}"
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
         ignore_errors: yes
 
       - name: Resizing the disk.
-        shell: qm resize {{ item.id }} scsi0 {{ item.size }}
-        with_items:
-            - { id: "{{ k8s_master_id }}", size: "{{ k8s_master_size }}" }
-            - { id: "{{ k8s_node1_id }}", size: "{{ k8s_node1_size }}" }
+        shell: qm resize {{ item.id }} scsi0 {{ item.size | default(k8s_vm_defaults.size) }}
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
         ignore_errors: yes
 
       - name: Starting the VMs.
-        shell: qm start {{ item }}
-        with_items: "{{ id_list }}"
+        shell: qm start {{ item.id }}
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
         ignore_errors: yes
 
       - name: Waiting for the VMs to become available.
         wait_for:
-            host: "{{ item }}"
+            host: "{{ item.ip }}"
             port: 22
-            msg: "VMs did not become available after 5 minutes. Network error?"
-        with_items:
-            - "{{ k8s_master_ip }}"
-            - "{{ k8s_node1_ip }}"
+            timeout: 300
+            msg: "{{ item.hn }} did not become available after 5 minutes. Network error?"
+        with_items: "{{ k8s_all_nodes }}"
+        delegate_to: localhost
 
-      - name: Waiting 2 minutes for for Debian to finish booting.
+      - name: Waiting 2 minutes for Debian to finish booting.
         pause:
             seconds: 120
+
+      - name: Detaching the cloud-init drive now that it has done its one job.
+        shell: qm set {{ item.id }} --delete ide2
+        delegate_to: "{{ item.host }}"
+        with_items: "{{ k8s_all_nodes }}"
+        ignore_errors: yes
+        # Deliberate: leaving a cloudinit medium attached means Proxmox's *stored*
+        # ipconfig0/nameserver/sshkeys config can silently overwrite the guest's live
+        # netplan config on a future cloud-init re-run (e.g. certain reboots), even if
+        # that stored config has since drifted from reality (vars.yml edited, VM cloned,
+        # etc). This happened for real on prox-node3 (9004) - its stored ipconfig0 had
+        # drifted to a different node's IP after being cloned, and because its cloudinit
+        # drive was still attached (the only one of the 4 that was), that stale IP was
+        # one cloud-init run away from silently conflicting with prox-node2 on the live
+        # network. Detach it here, right after first boot, for every node consistently -
+        # re-attach manually and deliberately if you ever need cloud-init to run again.

@@ -6,6 +6,18 @@
       include_vars:
         file: ../../vars.yml
 
+    - name: Safety check - refuse to reset an existing cluster without explicit confirmation.
+      assert:
+        that:
+          - confirm_destroy | default(false) | bool
+        fail_msg: >-
+          This playbook unconditionally runs `kubeadm reset -f` on the master, which wipes
+          any existing cluster's control plane state. It is meant for bootstrapping a FRESH
+          set of VMs (right after deploy_qcow2_vms.yml), not for re-running against an
+          already-live cluster. Re-run with -e confirm_destroy=true only once you've
+          confirmed that's actually what you want.
+      run_once: true
+
     - name: Reset the cluster
       become: yes
       shell: kubeadm reset -f
@@ -17,7 +29,7 @@
       become: yes
       shell: |
         kubeadm init \
-          --kubernetes-version="{{ kubernetes_version }}" \
+          --kubernetes-version="{{ kubeadm_init_version }}" \
           --pod-network-cidr={{ cilium_cidr }}/16
 
     - name: Creating a kube directory on the master for the config files.
@@ -51,22 +63,7 @@
         stdin: "{{ helm_installer.content }}"
         creates: /usr/local/bin/helm
       environment:
-        DESIRED_VERSION: "{{ helm_version | default('') }}"        
-  
-    # - name: Download Cilium from GitHub
-    #   ansible.builtin.uri:
-    #     url: "https://github.com/cilium/cilium/archive/refs/heads/main.tar.gz"
-    #     method: GET
-    #     dest: "/tmp/main.tar.gz"
-    #     return_content: no
-    #   register: download_result
-    
-    # - name: Extract cilium
-    #   ansible.builtin.unarchive:
-    #     src: /tmp/main.tar.gz
-    #     dest: /tmp
-    #     remote_src: yes
-    #   when: download_result is succeeded
+        DESIRED_VERSION: "{{ helm_version | default('') }}"
 
     - name: Install Cilium with Helm
       become: yes
@@ -75,12 +72,13 @@
         helm repo update
         helm install cilium cilium/cilium --namespace kube-system
       args:
-        executable: /bin/bash        
+        executable: /bin/bash
 
     - name: Retreiving the kube config.
       become: yes
       shell: cat ~/.kube/config
       register: k8s_config
+      no_log: true # this is the full cluster-admin kubeconfig - never let it hit the log
 
     - name: Create a remote ~/.kube directory on master node
       become: yes
@@ -93,6 +91,7 @@
       copy:
         content: "{{ k8s_config.stdout }}"
         dest: ~/.kube/config
+      no_log: true
 
     - name: Creating a local ~/.kube directory on your workstation.
       local_action:
@@ -102,12 +101,14 @@
 
     - name: Copying ~/.kube/config to your workstation.
       local_action: copy content={{ k8s_config.stdout }} dest=~/.kube/config-proxmox
+      no_log: true
 
     - name: Retreiving the kubeadm join command.
       become: yes
       shell: kubeadm token create --print-join-command
       when: k8s_join_command is undefined
       register: k8s_join_command
+      no_log: true # contains the bootstrap token - treat like a credential
 
 - hosts: k8s_nodes
   gather_facts: true
@@ -118,4 +119,10 @@
 
     - name: Joining the nodes to the master.
       become: yes
-      shell: "{{ hostvars[groups['k8s_master'][0]]['k8s_join_command']['stdout'] }} --ignore-preflight-errors=all"
+      shell: "{{ hostvars[groups['k8s_master'][0]]['k8s_join_command']['stdout'] }} --ignore-preflight-errors=Swap,SystemVerification"
+      no_log: true
+      # Was `--ignore-preflight-errors=all`, which silently swallows every preflight check,
+      # not just the ones that are actually expected to fail in this environment (swap was
+      # already disabled earlier in install_base_packages.yml but kubeadm re-checks it, and
+      # SystemVerification can be noisy on nested/virtualized kernels). Suppressing `all`
+      # would also hide a genuinely broken join (e.g. a port conflict) with no indication.

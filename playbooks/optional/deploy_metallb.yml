@@ -1,4 +1,13 @@
 ---
+# SUPERSEDED - do not run this against the live cluster. MetalLB is now Flux-managed from
+# the k8gitops repo's infrastructure/ directory, with the real IP pool (192.168.2.1-254).
+# This playbook's own template (files/templates/MetalLB/cm_metallb.yml.j2) still points at
+# an unreachable placeholder pool (10.10.10.20-250) and installs an old pinned MetalLB
+# version via raw `kubectl apply` - running it would create a conflicting, non-GitOps-managed
+# IPAddressPool with an address range that doesn't exist on this network. Kept here only for
+# reference/history. If you ever need to bootstrap a brand new cluster that k8gitops hasn't
+# been pointed at yet, fix the template's pool to match reality first, or better: let Flux
+# install MetalLB from k8gitops instead of running this at all.
 - hosts: k8s_master
   collections:
     - kubernetes.core  

@@ -1,4 +1,9 @@
 ---
+# SUPERSEDED (as a StorageClass/PVC provisioner) - not used by the live cluster. Every PVC
+# in k8gitops uses the `synology-iscsi-storage-v2` StorageClass, not NFS-backed dynamic
+# provisioning. Note this is unrelated to the separate, actually-required static NFS fstab
+# mounts handled in install_base_packages.yml (nfs_mounts in vars.yml) - those back hostPath
+# volumes for several apps and are NOT superseded. Kept here only for reference/history.
 - hosts: k8s_master:k8s_nodes
   gather_facts: true
   tasks:

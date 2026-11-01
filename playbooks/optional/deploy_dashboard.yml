@@ -1,4 +1,7 @@
 ---
+# LIKELY SUPERSEDED/UNUSED - nothing in k8gitops references the Kubernetes Dashboard.
+# dashboard_hostname and dashboard_load_balancer_ip in vars.yml were both stale placeholders
+# (fixed, but left blank - fill in real values before running this). Kept for reference.
 - hosts: k8s_master
   gather_facts: true
   tasks:

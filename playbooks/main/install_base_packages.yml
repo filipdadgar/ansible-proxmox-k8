@@ -18,7 +18,7 @@
       - name: Installing the base packages.
         become: yes
         apt:
-            name: ['apt-transport-https', 'ca-certificates', 'curl', 'haveged', 'gnupg2', 'openssl', 'python-pip', 'python3-pip', 'qemu-guest-agent', 'software-properties-common', 'arptables', 'ebtables', 'coreutils']
+            name: ['apt-transport-https', 'ca-certificates', 'curl', 'haveged', 'gnupg2', 'openssl', 'python-pip', 'python3-pip', 'qemu-guest-agent', 'software-properties-common', 'arptables', 'ebtables', 'coreutils', 'nfs-common']
 
       - name: Configuring the nodes to use legacy iptables for compatibility with Kubernetes.
         become: yes
@@ -31,6 +31,26 @@
             - "arptables"
             - "ebtables"
 
+      - name: Creating the NFS mount points.
+        become: yes
+        file:
+            path: "{{ item.path }}"
+            state: directory
+            mode: '0755'
+        loop: "{{ nfs_mounts }}"
+
+      - name: Mounting the Synology NFS shares (fstab).
+        become: yes
+        mount:
+            path: "{{ item.path }}"
+            src: "{{ nfs_server }}:{{ item.share }}"
+            fstype: nfs4
+            opts: "{{ nfs_mount_opts }}"
+            state: mounted
+        loop: "{{ nfs_mounts }}"
+        # Required by several k8gitops apps that use hostPath volumes under /media/* -
+        # see vars.yml's "NFS mounts" section for which apps depend on this.
+
       - name: Ensure /etc/apt/keyrings directory exists
         become: yes
         file:
@@ -41,7 +61,7 @@
       - name: Download Kubernetes apt key
         become: yes
         get_url:
-          url: https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key
+          url: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_apt_series }}/deb/Release.key"
           dest: /tmp/kubernetes-release.key
 
       - name: Add Kubernetes apt key
@@ -53,7 +73,7 @@
       - name: Add Kubernetes repository
         become: yes
         apt_repository:
-          repo: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /'
+          repo: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/{{ kubernetes_apt_series }}/deb/ /"
           filename: kubernetes
           state: present
 
@@ -65,23 +85,19 @@
       - name: Install the required packages to bootstrap a Kubernetes cluster
         become: yes
         apt:
-          name: ['containerd', 'kubelet', 'kubeadm', 'kubectl']
+          name:
+            - containerd
+            - "kubelet={{ kubernetes_version }}-*"
+            - "kubeadm={{ kubernetes_version }}-*"
+            - "kubectl={{ kubernetes_version }}-*"
           state: present
-            #docker-ce={{ docker_version }}
-
-      # - name: Setting Docker CGroup to systemd.
-      #   become: yes
-      #   shell: |
-      #       cat > /etc/docker/daemon.json <<EOF
-      #       {
-      #         "exec-opts": ["native.cgroupdriver=systemd"],
-      #         "log-driver": "json-file",
-      #         "log-opts": {
-      #           "max-size": "100m"
-      #         },
-      #         "storage-driver": "overlay2"
-      #       }
-      #       EOF
+        # Pinned to kubernetes_version (vars.yml) so the installed kubeadm/kubelet/kubectl
+        # patch version always matches what bootstrap_kubernetes.yml's `kubeadm init
+        # --kubernetes-version` expects - previously these were installed unpinned
+        # ("state: present" against whatever v1.28 happened to be latest at run time)
+        # while the init command separately demanded an entirely different v1.30.0 that
+        # vars.yml defined but nothing actually consumed. Bump kubernetes_version and
+        # kubernetes_apt_series together in vars.yml when upgrading.
 
       - name: Setting containerd prereq.
         become: yes
@@ -109,7 +125,7 @@
               base_runtime_spec = ""
               [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
               SystemdCgroup = true
-             EOF
+            EOF
 
       - name: Installing the necessary Python library dependencies to use the `k8s` Ansible module.
         become: yes
@@ -124,7 +140,6 @@
             name: "{{ item }}"
             enabled: yes
         with_items:
-            #- "docker"
             - "containerd"
             - "kubelet"
             - "qemu-guest-agent"
@@ -144,8 +159,6 @@
             value: 1
             sysctl_set: yes
         loop:
-            #- net.bridge.bridge-nf-call-ip6tables
-            #- net.bridge.bridge-nf-call-iptables
             - net.ipv4.ip_forward
         loop_control:
             loop_var: entry
@@ -154,11 +167,6 @@
         modprobe:
             name: overlay
             state: present
-
-      # - name: Ensuring that the br_netfilter kernel module is loaded.
-      #   modprobe:
-      #       name: br_netfilter
-      #       state: present
 
       - name: Disabling Swap.
         become: yes
@@ -183,26 +191,11 @@
           - { regexp: '^#?Port', line: 'Port 22' }
           - { regexp: '^#?AddressFamily', line: 'AddressFamily any' }
           - { regexp: '^#?ListenAddress', line: 'ListenAddress 0.0.0.0' }
-          # Add more lines as needed
         notify:
           - Restart SSH
 
       - name: Restart SSH if changed
         meta: flush_handlers
-
-
-
-
-
-
-
-      # handlers:
-      #   - name: Restart SSH
-      #     become: yes
-      #     service:
-      #       name: ssh
-      #       state: restarted
-
 
       - name: Turning off swap.
         become: yes
@@ -211,3 +204,14 @@
       - name: Rebooting the OS to switch to cloud-init provided network configuration & finalize any necessary package upgrades.
         become: yes
         reboot:
+
+  handlers:
+    - name: Restart SSH
+      become: yes
+      service:
+        name: ssh
+        state: restarted
+      # Was previously commented out while the task above still had `notify: - Restart SSH`
+      # pointed at it - if that sshd_config task ever actually changed a line (not a no-op
+      # against defaults), `meta: flush_handlers` would fail with "requested handler not
+      # found" and the whole playbook would stop here, mid-provisioning.

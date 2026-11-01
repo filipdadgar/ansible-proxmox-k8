@@ -1,0 +1,67 @@
+---
+# Codifies the one-time, host-level steps that prox-node3 needs for its passed-through USB
+# Bluetooth dongle to work reliably with home-assistant's Plejd integration (k8gitops
+# apps/home-assistant). Previously these were manual, undocumented-in-automation steps -
+# see apps/home-assistant/README.md in k8gitops for the full diagnosis behind each one.
+#
+# Run this once, after prox-node3 has finished its first boot (i.e. after site.yml, or
+# after re-creating just this VM) - it is NOT part of site.yml's default chain, since it's
+# specific to this one node's passed-through hardware, not something every k8s_node needs.
+#
+# ansible-playbook -i inventory.ini playbooks/main/configure_node3_bluetooth.yml
+
+- hosts: bluetooth_dongle_host
+  gather_facts: true
+  tasks:
+    - name: Installing bluez (bluetoothd is not present on the base Debian image).
+      become: yes
+      apt:
+        name: bluez
+        state: present
+        update_cache: yes
+
+    - name: Enabling and starting bluetooth.service.
+      become: yes
+      systemd:
+        name: bluetooth
+        state: started
+        enabled: yes
+
+    - name: Disabling USB autosuspend for the Bluetooth dongle (CSR8510 A10, idVendor 0a12, idProduct 0001).
+      become: yes
+      copy:
+        dest: /etc/udev/rules.d/99-bluetooth-no-autosuspend.rules
+        content: |
+          ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0a12", ATTR{idProduct}=="0001", TEST=="power/control", ATTR{power/control}="on"
+        mode: '0644'
+      register: udev_rule
+      # Without this, the dongle's default power/control=auto (2000ms autosuspend) lets the
+      # kernel USB-suspend it during BLE idle gaps, dropping the adapter's HCI Powered state -
+      # bluetoothd and Home Assistant both see a spurious disconnect/reconnect every
+      # 8-25 minutes with no actual physical state change. Diagnosed via a light entity
+      # appearing to "turn on by itself" - see apps/home-assistant/README.md for the full
+      # diagnosis (journalctl showed "Failed to disconnect device: Not Powered (0x0f)" at
+      # the same timestamps as the spurious state flips).
+
+    - name: Reloading and re-triggering udev rules (no reboot needed).
+      become: yes
+      shell: |
+        udevadm control --reload-rules
+        udevadm trigger --subsystem-match=usb --action=add
+      when: udev_rule.changed
+
+    - name: Verifying the dongle's power/control is now "on".
+      become: yes
+      shell: |
+        for dev in /sys/bus/usb/devices/*/power/control; do
+          grep -l . "$(dirname "$dev")/idVendor" >/dev/null 2>&1 || continue
+          if [ "$(cat "$(dirname "$dev")/idVendor" 2>/dev/null)" = "0a12" ] && [ "$(cat "$(dirname "$dev")/idProduct" 2>/dev/null)" = "0001" ]; then
+            echo "$dev: $(cat "$dev")"
+          fi
+        done
+      register: dongle_power_control
+      changed_when: false
+
+    - name: Report dongle power/control state.
+      debug:
+        msg: "{{ dongle_power_control.stdout_lines }}"
